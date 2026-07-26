@@ -208,7 +208,7 @@ async def bulk_delete_payees(session: AsyncSession, workspace_id: uuid.UUID, pay
     )
     
     await session.commit()
-    return result.rowcount
+    return cast(CursorResult, result).rowcount
 
 
 async def merge_payees(
