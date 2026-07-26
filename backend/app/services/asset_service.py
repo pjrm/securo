@@ -23,6 +23,9 @@ from app.services.fx_rate_service import convert, stamp_primary_amount
 
 logger = logging.getLogger(__name__)
 
+ValueRecord = tuple[date, Decimal, Optional[Decimal]]  # (date, amount, price_per_share)
+TxRecord = tuple[date, str, Decimal, Optional[Decimal]]  # (date, kind, quantity, price_per_share)
+
 
 def _next_due_date(last_date: date, frequency: str) -> date:
     """Calculate the next due date based on frequency."""
@@ -196,8 +199,8 @@ async def _get_value_as_of(
 
 
 def build_market_value_series(
-    value_rows: list[tuple[date, Decimal, Optional[Decimal]]],
-    txs: list[tuple[date, str, Decimal, Optional[Decimal]]],
+    value_rows: list[ValueRecord],
+    txs: list[TxRecord],
 ) -> list[tuple[date, float]]:
     """Rebuild a market-priced holding's value series from the ledger.
 
@@ -291,7 +294,7 @@ async def _load_asset_native_values(
         q = q.where(AssetValue.date <= up_to_date)
 
     rows = (await session.execute(q)).all()
-    raw: dict[str, list[tuple[date, Decimal, Optional[Decimal]]]] = {str(a.id): [] for a in assets}
+    raw: dict[str, list[ValueRecord]] = {str(a.id): [] for a in assets}
     for aid, d, amt, price in rows:
         raw[str(aid)].append((d, amt, price))
 
@@ -901,7 +904,7 @@ async def get_portfolio_trend(
 
     # The header total matches the last row's _total — both use the same
     # per-display-date conversion so no second conversion is needed.
-    total = trend[-1]["_total"] if trend else 0.0
+    total: float = trend[-1]["_total"] if trend else 0.0
 
     return {"assets": asset_meta, "trend": trend, "total": round(total, 2)}
 
