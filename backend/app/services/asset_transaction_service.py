@@ -311,6 +311,8 @@ async def update_transaction(
         setattr(tx, key, value)
     _validate(tx.kind, _d(tx.quantity), _d(tx.price))
     asset = await _load_asset(session, tx.asset_id, workspace_id)
+    if asset is None:
+        return None
     await session.flush()
     await recompute_and_cache(session, asset)
     await session.commit()
@@ -329,6 +331,8 @@ async def delete_transaction(
     if tx is None:
         return None
     asset = await _load_asset(session, tx.asset_id, workspace_id)
+    if asset is None:
+        return None
     await session.delete(tx)
     await session.flush()
     await recompute_and_cache(session, asset)
@@ -401,7 +405,10 @@ async def buy_into_holding(
     await session.flush()
     await recompute_and_cache(session, asset)
     await session.commit()
-    return await asset_service.get_asset(session, asset.id, workspace_id)
+    result = await asset_service.get_asset(session, asset.id, workspace_id)
+    if result is None:
+        raise RuntimeError("Asset disappeared after ledger transaction")
+    return result
 
 
 def _type_from_quote(quote_type: Optional[str]) -> str:

@@ -283,11 +283,7 @@ async def list_members(session: AsyncSession, workspace_id: uuid.UUID) -> list[t
     if not members:
         return []
     user_ids = [m.user_id for m in members]
-    # ty can't read the `TYPE_CHECKING` branch in fastapi_users'
-    # `SQLAlchemyBaseUserTableUUID`, which declares `id` as a plain
-    # `uuid.UUID` instead of a `Mapped` column, so `User.id` isn't
-    # recognized as a SQLAlchemy column here.
-    user_rows = await session.execute(select(User).where(User.id.in_(user_ids)))  # ty: ignore[unresolved-attribute]
+    user_rows = await session.execute(select(User).where(User.id.in_(user_ids)))
     users_by_id = {u.id: u for u in user_rows.scalars().all()}
     return [(m, users_by_id[m.user_id]) for m in members if m.user_id in users_by_id]
 
