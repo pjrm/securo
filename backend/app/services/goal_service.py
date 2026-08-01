@@ -50,6 +50,8 @@ async def _linked_name(session: AsyncSession, model: type, item_id: uuid.UUID | 
         return None
     if isinstance(item, Account):
         return get_account_name(item)
+    if not isinstance(item, (Asset, AssetGroup)):
+        raise Exception("Invalid instance type")
     return item.name
 
 

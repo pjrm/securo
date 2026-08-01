@@ -2,7 +2,7 @@ import logging
 import uuid
 from datetime import date, datetime, timezone, timedelta
 from decimal import Decimal
-from typing import Optional
+from typing import Any, Optional, cast
 
 from fastapi import HTTPException, status
 from sqlalchemy import select, func, desc
@@ -249,7 +249,7 @@ def build_market_value_series(
         qty += tx_delta.get(d, Decimal("0"))
         held = qty if qty > 0 else Decimal("0")
 
-        amount, price = value_by_date.get(d, (None, None))
+        amount, price = value_by_date.get(d, (0.0, None))
         if price is not None:
             last_price = price  # a recorded market price always wins
             seen_market = True
@@ -264,7 +264,7 @@ def build_market_value_series(
         elif last_price is not None:
             out.append((d, float(last_price * held)))
         else:
-            out.append((d, float(amount) if amount is not None else 0.0))
+            out.append((d, float(amount)))
     return out
 
 
@@ -300,7 +300,7 @@ async def _load_asset_native_values(
 
     # Bulk-load the ledger for market-priced holdings (one query).
     market_ids = [a.id for a in assets if a.valuation_method == "market_price"]
-    txs_by_aid: dict[str, list[tuple[date, str, Decimal]]] = {}
+    txs_by_aid: dict[str, list[TxRecord]] = {}
     if market_ids:
         tq = select(
             AssetTransaction.asset_id, AssetTransaction.date,
@@ -817,7 +817,7 @@ async def get_portfolio_trend(
 
     values_map = await _load_asset_native_values(session, active_assets)
 
-    asset_meta = []
+    asset_meta: list[dict[str, Any]] = []
     asset_currency: dict[str, str] = {}
     sell_date_by_aid: dict[str, date] = {}
     all_dates: set[date] = set()
@@ -904,7 +904,7 @@ async def get_portfolio_trend(
 
     # The header total matches the last row's _total — both use the same
     # per-display-date conversion so no second conversion is needed.
-    total: float = trend[-1]["_total"] if trend else 0.0
+    total: float = cast(float, trend[-1]["_total"]) if trend else 0.0
 
     return {"assets": asset_meta, "trend": trend, "total": round(total, 2)}
 
