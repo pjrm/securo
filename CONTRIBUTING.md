@@ -62,12 +62,18 @@ The same applies to issues. An issue produced by pointing a model at the reposit
 Optional but recommended, so you catch lint and type errors before CI does:
 
 ```bash
-pip install pre-commit && pre-commit install   # once, from the repo root
+prek install                                   # once, from the repo root
+# or, if you prefer the Python original:
+pip install pre-commit && pre-commit install
 ```
 
 This runs `ruff check` and `ty check` on the backend whenever you commit a
 `backend/*.py` file. Both read their config from `backend/pyproject.toml`, so
 local and CI stay in sync.
+
+[prek](https://github.com/j178/prek) is a drop-in replacement for pre-commit:
+same `.pre-commit-config.yaml`, but a single binary with no Python bootstrap.
+Either works.
 
 ## Commit Messages
 

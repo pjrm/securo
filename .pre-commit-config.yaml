@@ -1,23 +1,13 @@
-# Local dev checks, mirroring the backend job in .github/workflows/ci.yml so a
-# push doesn't fail on something a commit could have caught.
+# Runs the same backend checks as CI, before you push. Optional.
 #
-# Setup (once, from the repo root):
-#   cd backend && pip install -e ".[dev]"
-#   pip install pre-commit && pre-commit install
+#   cd backend && pip install -e ".[dev]"   # installs ruff + ty
+#   prek install                            # or: pip install pre-commit && pre-commit install
 #
-# The hooks are `language: system` on purpose: they run the ruff and ty that
-# `.[dev]` already pins, so local and CI always agree on the version. An
-# isolated pre-commit venv would not see FastAPI, SQLAlchemy et al., and ty
-# would drown in false `unresolved-import` errors.
+# Run by hand: prek run --all-files
 #
-# To run everything by hand:  pre-commit run --all-files
-# To skip once (rarely a good idea):  git commit --no-verify
-#
-# If ty reports errors CI doesn't, your venv is probably behind pyproject.toml —
-# ty reads the installed packages' type stubs, so an old dependency yields
-# different diagnostics. Re-run `pip install -e ".[dev]"` before investigating.
-
-minimum_pre_commit_version: "2.9.2"
+# The hooks call the ruff and ty from backend/.[dev], so they always match the
+# versions CI uses. If ty reports errors CI doesn't, your venv is behind
+# pyproject.toml — re-run the install above.
 
 repos:
   - repo: local
@@ -28,8 +18,6 @@ repos:
         language: system
         types: [python]
         files: ^backend/
-        # ruff is configured in backend/pyproject.toml; let it resolve its own
-        # file set rather than passing staged paths.
         pass_filenames: false
 
       - id: ty
@@ -38,17 +26,6 @@ repos:
         language: system
         types: [python]
         files: ^backend/
-        # Always check the whole project. Type errors propagate: editing b.py
-        # can introduce a diagnostic in a.py, so checking only staged files
-        # would give a false all-clear.
+        # Type errors propagate: editing b.py can break a.py, so check the
+        # whole project rather than just the staged files.
         pass_filenames: false
-        require_serial: true
-
-# Note: these only fire when the commit touches a backend/*.py file, to keep
-# frontend-only commits fast. A commit that *only deletes* backend files won't
-# trigger them (pre-commit passes no staged paths for deletions) — CI is the
-# backstop for that case.
-#
-# `ruff format` is deliberately absent: formatting the backend is a separate
-# change, so its (large) diff doesn't get mixed into unrelated PRs. Add a
-# `ruff format --check` hook here when that lands.
