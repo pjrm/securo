@@ -307,12 +307,16 @@ async def update_transaction(
     )
     _raise_if_oversell(others + [edited])
 
-    for key, value in fields.items():
-        setattr(tx, key, value)
-    _validate(tx.kind, _d(tx.quantity), _d(tx.price))
+    # Resolve the asset before mutating the row: bailing out after the
+    # setattr loop would leave the edits pending in the session, so a later
+    # commit in the same request would persist an update we reported failed.
     asset = await _load_asset(session, tx.asset_id, workspace_id)
     if asset is None:
         return None
+
+    for key, value in fields.items():
+        setattr(tx, key, value)
+    _validate(tx.kind, _d(tx.quantity), _d(tx.price))
     await session.flush()
     await recompute_and_cache(session, asset)
     await session.commit()
