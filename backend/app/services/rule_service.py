@@ -1,6 +1,6 @@
 # backend/app/services/rule_service.py
 import uuid
-from typing import Any, Optional
+from typing import Any, Optional, cast
 
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -759,7 +759,7 @@ async def _ensure_categories_for_keys(
 async def install_rule_pack(
     session: AsyncSession,
     workspace_id_or_user_id: uuid.UUID,
-    user_id_or_pack_code: uuid.UUID,
+    user_id_or_pack_code: uuid.UUID | str,
     pack_code: Optional[str] = None,
     lang: str = "pt-BR",
     create_missing_categories: bool = False,
@@ -778,7 +778,9 @@ async def install_rule_pack(
         pack_code = str(user_id_or_pack_code)
     else:
         workspace_id = workspace_id_or_user_id
-        user_id = user_id_or_pack_code
+        # Narrowed by the branch: `pack_code` being set means the caller used
+        # the workspace-scoped signature, so this argument is the user id.
+        user_id = cast(uuid.UUID, user_id_or_pack_code)
 
     pack = RULE_PACKS.get(pack_code)
     if not pack:

@@ -50,9 +50,10 @@ async def _linked_name(session: AsyncSession, model: type, item_id: uuid.UUID | 
         return None
     if isinstance(item, Account):
         return get_account_name(item)
-    if not isinstance(item, (Asset, AssetGroup)):
-        raise Exception("Invalid instance type")
-    return item.name
+    # Callers pass Asset / AssetGroup, both of which have `.name`. Stay
+    # tolerant rather than raising: a goal whose link we can't name should
+    # render without one, not 500 the whole goals list.
+    return getattr(item, "name", None)
 
 
 async def _resolve_current_amount(
